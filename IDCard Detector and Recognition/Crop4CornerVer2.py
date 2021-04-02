@@ -1,11 +1,7 @@
-import cv2
-import numpy as np
 import time
-import matplotlib.pyplot as plt
-import imutils
-import matplotlib.pyplot as plt
 from PIL import Image
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 import re
 from unidecode import unidecode
@@ -23,6 +19,56 @@ with open(fname,encoding="utf8") as f:
     last_name_list = f.readlines()
 last_name_list = [x.strip().upper() for x in last_name_list]
 last_name_decode = [unidecode(x) for x in last_name_list]
+def detect_blur_fft(image, size=60, thresh=10, vis=False):
+    # grab the dimensions of the image and use the dimensions to
+    # derive the center (x, y)-coordinates
+    (h, w) = image.shape
+    (cX, cY) = (int(w / 2.0), int(h / 2.0))
+
+    # compute the FFT to find the frequency transform, then shift
+    # the zero frequency component (i.e., DC component located at
+    # the top-left corner) to the center where it will be more
+    # easy to analyze
+    fft = np.fft.fft2(image)
+    fftShift = np.fft.fftshift(fft)
+
+    # check to see if we are visualizing our output
+    if vis:
+        # compute the magnitude spectrum of the transform
+        magnitude = 20 * np.log(np.abs(fftShift))
+
+        # display the original input image
+        (fig, ax) = plt.subplots(1, 2, )
+        ax[0].imshow(image, cmap="gray")
+        ax[0].set_title("dowloads")
+        ax[0].set_xticks([])
+        ax[0].set_yticks([])
+
+        # display the magnitude image
+        ax[1].imshow(magnitude, cmap="gray")
+        ax[1].set_title("Magnitude Spectrum")
+        ax[1].set_xticks([])
+        ax[1].set_yticks([])
+
+        # show our plots
+        plt.show()
+
+    # zero-out the center of the FFT shift (i.e., remove low
+    # frequencies), apply the inverse shift such that the DC
+    # component once again becomes the top-left, and then apply
+    # the inverse FFT
+    fftShift[cY - size:cY + size, cX - size:cX + size] = 0
+    fftShift = np.fft.ifftshift(fftShift)
+    recon = np.fft.ifft2(fftShift)
+
+    # compute the magnitude spectrum of the reconstructed image,
+    # then compute the mean of the magnitude values
+    magnitude = 20 * np.log(np.abs(recon))
+    mean = np.mean(magnitude)
+
+    # the image will be considered "blurry" if the mean value of the
+    # magnitudes is less than the threshold value
+    return (mean, mean <= thresh)
 def get_center_point(box):
     if len(box)==0:
         return ()
@@ -198,8 +244,6 @@ def Crop_img(frame):
 
     miss_corner=find_miss_corner(a)
     if miss_corner!=None:
-        #print(label_boxes)
-        #cv2_imshow(frame)
         label_boxes=calculate_missed_coord_corner(label_boxes,miss_corner)
     if miss_corner==-1:
         return None
@@ -217,41 +261,16 @@ def Crop_img(frame):
 Size_Text=[[115,170,365,900],[165,235,395,950],[225,280,295,925],[280,326,455,925],[318,375,555,925],[375,425,295,925],[420,465,625,925],[465,510,295,925]]
 def ExtractInfo(img,count):
     im_pil = Image.fromarray(img)
-    """im_gray = cv2.imread(img, cv2.IMREAD_GRAYSCALE)
-    (thresh, im_bw) = cv2.threshold(im_gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-    if thresh>110:
-            thresh=thresh*(1-(0.25-thresh/1000))
-    else:
-            thresh=thresh*(1-(0.3-thresh/1000))
-    print(thresh)
-    im_bw = cv2.threshold(im_gray, thresh, 255, cv2.THRESH_BINARY)[1]
-    #cv2.imshow('bw_image.png', im_bw)
-    kernel = np.ones((3,3),np.uint8)
-    dilation = cv2.dilate(im_bw,kernel,iterations = 1)
-    #cv2.imshow("dilation",dilation)
-    erosion = cv2.erode(dilation,kernel,iterations = 1)
-    #cv2.imshow("erosion",erosion
-    #plt.imshow(img)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    im_pil = Image.fromarray(img)"""
-    #cv2.imshow("image",(img))
     s = detector.predict(im_pil)
     if count%2==0:
         a=re.findall(r'\d+', s)
         for j in a:
             if len(j)==9 or len(j)==12:
-                print(j)
                 return j
-                break
             if len(j)>9 and len(j)<12:
-                print(j[len(j)-9:])
                 return j[len(j)-9:]
-                break
     else:
         words = s.split()
-        #last_name_list = ["Liêu","Đinh","Nguyễn",'Trần','Lê','Phạm','Hoàng','Huỳnh','Phan','Vũ','Võ','Đặng','Bùi','Đỗ','Hồ','Ngô','Dương','Lý','Đoàn','Trương',"Từ"]
-        #last_name_list = [x.strip().upper() for x in last_name_list]
-        #print(last_name_list)
         if len(words)>7:
             return ""
         for j in range(0,len(words)):
@@ -260,17 +279,13 @@ def ExtractInfo(img,count):
                 if unidecode(words[j]).upper()=="HO" and j==0 or unidecode(words[j]).upper()=="THI" :
                     continue
                 text = ' '.join(words[j:])
-                print(text)
                 return text
-                break
-    print(s)
+
 def ExtractIDAndName(img):
     count=0
     text=[]
     for i in Size_Text[:3]:
         crop_img = img[i[0]:i[1],i[2]:i[3]]
-        #cv2.imshow("cropped", crop_img)
         text.append(ExtractInfo(crop_img,count))
         count+=1
-        #cv2.waitKey(0)
     return text
