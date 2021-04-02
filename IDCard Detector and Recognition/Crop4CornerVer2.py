@@ -185,8 +185,8 @@ class_names = [ 'Bottom_left', 'Bottom_right','Top_left', 'Top_right']
 
 #net = cv2.dnn.readNet("D:/linh_tinh/4Corner/custom-yolov4-tiny-detector_final.weights",
 #                      "D:/linh_tinh/4Corner/custom-yolov4-tiny-detector.cfg")
-net = cv2.dnn.readNet("./4CornerVer3/custom-yolov4-detector_best.weights",
-                      "./4CornerVer3/custom-yolov4-detector.cfg")
+net = cv2.dnn.readNet("./4CornerVer3/detect4corner.weights",
+                      "./4CornerVer3/detect4corner.cfg")
 net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
 net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA_FP16)
 
