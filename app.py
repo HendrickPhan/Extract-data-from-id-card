@@ -36,7 +36,7 @@ def load_image_into_numpy_array(image):
 app = Flask(__name__)
 
 app.config['UPLOAD_FOLDER'] = 'uploads/'
-app.config['DOWNLOAD_FOLDER'] = 'dowloads/'
+app.config['DOWNLOAD_FOLDER'] = 'downloads/'
 app.config['IDCARD_FOLDER']='IDCard/'
 app.config['ALLOWED_EXTENSIONS'] = set(['png', 'jpg', 'jpeg'])
 
@@ -92,16 +92,23 @@ def upload():
     for image_path in TEST_IMAGE_PATHS:
         return (Process(image_path,filename))
 
+
 @app.route('/upload/url', methods=['POST'])
 def url():
     url = request.json
     filename = url['url'].split('/')[-1]
-    if allowed_file(filename):
+    if len(filename.split('.'))==1 and filename in ['png', 'jpg', 'jpeg']:
+        filename = url['url'].split('/')[-2]+"."+filename
         with open(app.config['DOWNLOAD_FOLDER']+filename, 'wb') as f:
             f.write(requests.get(url["url"]).content)
         return Process(app.config['DOWNLOAD_FOLDER']+filename,filename)
     else:
-        return jsonify('Fail incorrect type Image'+filename)
+        if allowed_file(filename):
+            with open(app.config['DOWNLOAD_FOLDER']+filename, 'wb') as f:
+                f.write(requests.get(url["url"]).content)
+            return Process(app.config['DOWNLOAD_FOLDER']+filename,filename)
+        else:
+            return jsonify('Fail incorrect type Image '+filename)
 
 
 if __name__ == '__main__':
