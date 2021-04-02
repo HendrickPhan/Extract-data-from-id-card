@@ -40,7 +40,7 @@ def detect_blur_fft(image, size=60, thresh=10, vis=False):
         # display the original input image
         (fig, ax) = plt.subplots(1, 2, )
         ax[0].imshow(image, cmap="gray")
-        ax[0].set_title("dowloads")
+        ax[0].set_title("downloads")
         ax[0].set_xticks([])
         ax[0].set_yticks([])
 
@@ -258,25 +258,25 @@ def Crop_img(frame):
     return crop
     #print(aha)
     #break
-Size_Text=[[115,170,365,900],[165,235,395,950],[225,280,295,925],[280,326,455,925],[318,375,555,925],[375,425,295,925],[420,465,625,925],[465,510,295,925]]
+Size_Text=[[115,170,365,900],[165,235,395,950],[225,280,295,950],[280,326,455,950],[318,375,555,950],[375,425,295,950],[420,465,625,950],[465,510,295,950]]
 def ExtractInfo(img,count):
     im_pil = Image.fromarray(img)
     s = detector.predict(im_pil)
-    if count%2==0:
+    if count==0:
         a=re.findall(r'\d+', s)
         for j in a:
             if len(j)==9 or len(j)==12:
                 return j
             if len(j)>9 and len(j)<12:
                 return j[len(j)-9:]
-    else:
+    if count==1 or count==2:
         words = s.split()
         if len(words)>7:
             return ""
         for j in range(0,len(words)):
             #print(unidecode(words[j]).upper())
             if  unidecode(words[j]).upper() in last_name_decode:
-                if unidecode(words[j]).upper()=="HO" and j==0 or unidecode(words[j]).upper()=="THI" :
+                if unidecode(words[j]).upper()=="THI" :
                     continue
                 text = ' '.join(words[j:])
                 return text
