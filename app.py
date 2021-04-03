@@ -48,14 +48,29 @@ def allowed_file(filename):
 def Process(image_path,filename):
     info={}
     frame = cv2.imread(image_path)
+    (h, w, d) = frame.shape
     classes, scores, boxes = model.detect(frame, 0.7, NMS_THRESHOLD)
     if len(classes)>=1:
         for (classid, score, box) in zip(classes, scores, boxes):
-            crop_img = frame[box[1]:box[1]+box[3], box[0]:box[0]+box[2]]
+            box1=box.copy()
+            x0=box1[0]
+            x1=box1[1]
+            x2=box1[2]
+            x3=box1[3]
+            if box[1]+box[3]<h-25:
+                x3=box[1]+box[3]+25
+            if box[1]>25:
+                x1=box[1]-25
+            if box[0]+box[2]<w-25:
+                x2=box[0]+box[2]+25
+            if box[0]>25:
+                x0=box[0]-25
+            crop_img = frame[x1:x3, x0:x2]
+            #crop_img = frame[box[1]:box[1]+box[3], box[0]:box[0]+box[2]]
             frame1 = imutils.resize(crop_img, width=500)
             gray = cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
             (mean, blurry) = detect_blur_fft(gray, size=60,
-                                             thresh=19, vis=False)
+                                             thresh=8.5, vis=False)
             if blurry:
                 return {
                     "blur": True,
