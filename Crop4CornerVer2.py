@@ -20,54 +20,8 @@ with open(fname,encoding="utf8") as f:
 last_name_list = [x.strip().upper() for x in last_name_list]
 last_name_decode = [unidecode(x) for x in last_name_list]
 def detect_blur_fft(image, size=60, thresh=10, vis=False):
-    # grab the dimensions of the image and use the dimensions to
-    # derive the center (x, y)-coordinates
-    (h, w) = image.shape
-    (cX, cY) = (int(w / 2.0), int(h / 2.0))
-
-    # compute the FFT to find the frequency transform, then shift
-    # the zero frequency component (i.e., DC component located at
-    # the top-left corner) to the center where it will be more
-    # easy to analyze
-    fft = np.fft.fft2(image)
-    fftShift = np.fft.fftshift(fft)
-
-    # check to see if we are visualizing our output
-    if vis:
-        # compute the magnitude spectrum of the transform
-        magnitude = 20 * np.log(np.abs(fftShift))
-
-        # display the original input image
-        (fig, ax) = plt.subplots(1, 2, )
-        ax[0].imshow(image, cmap="gray")
-        ax[0].set_title("downloads")
-        ax[0].set_xticks([])
-        ax[0].set_yticks([])
-
-        # display the magnitude image
-        ax[1].imshow(magnitude, cmap="gray")
-        ax[1].set_title("Magnitude Spectrum")
-        ax[1].set_xticks([])
-        ax[1].set_yticks([])
-
-        # show our plots
-        plt.show()
-
-    # zero-out the center of the FFT shift (i.e., remove low
-    # frequencies), apply the inverse shift such that the DC
-    # component once again becomes the top-left, and then apply
-    # the inverse FFT
-    fftShift[cY - size:cY + size, cX - size:cX + size] = 0
-    fftShift = np.fft.ifftshift(fftShift)
-    recon = np.fft.ifft2(fftShift)
-
-    # compute the magnitude spectrum of the reconstructed image,
-    # then compute the mean of the magnitude values
-    magnitude = 20 * np.log(np.abs(recon))
-    mean = np.mean(magnitude)
-
-    # the image will be considered "blurry" if the mean value of the
-    # magnitudes is less than the threshold value
+    canny = cv2.Canny(image, 50,250)
+    mean=cv2.mean(canny)[0]
     return (mean, mean <= thresh)
 def get_center_point(box):
     if len(box)==0:
@@ -258,7 +212,7 @@ def Crop_img(frame):
     return crop
     #print(aha)
     #break
-Size_Text=[[115,170,365,900],[165,235,395,950],[225,280,295,950],[280,326,455,950],[318,375,555,950],[375,425,295,950],[420,465,625,950],[465,510,295,950]]
+Size_Text=[[115,170,465,900],[165,235,395,950],[225,280,295,950],[280,326,455,950],[318,375,555,950],[375,425,295,950],[420,465,625,950],[465,510,295,950]]
 def ExtractInfo(img,count):
     im_pil = Image.fromarray(img)
     s = detector.predict(im_pil)
@@ -275,7 +229,7 @@ def ExtractInfo(img,count):
             return ""
         for j in range(0,len(words)):
             #print(unidecode(words[j]).upper())
-            if  unidecode(words[j]).upper() in last_name_decode:
+            if unidecode(words[j]).upper() in last_name_decode:
                 if unidecode(words[j]).upper()=="THI" :
                     continue
                 text = ' '.join(words[j:])
