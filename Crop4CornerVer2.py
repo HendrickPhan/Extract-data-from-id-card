@@ -7,6 +7,19 @@ import re
 from unidecode import unidecode
 from vietocr.tool.predictor import Predictor
 from vietocr.tool.config import Cfg
+from PIL import Image
+# Morphological filtering
+from skimage.morphology import opening
+from skimage.morphology import disk
+
+# Data handling
+import numpy as np
+
+# Connected component filtering
+import cv2
+
+black = 0
+white = 255
 config = Cfg.load_config_from_name('vgg_transformer')
 config['weights'] = './models/transformerocr.pth'
 #config['weights'] = 'https://drive.google.com/uc?id=13327Y1tz1ohsm5YZMyXVMPIOjoOA0OaA'
@@ -19,6 +32,37 @@ with open(fname,encoding="utf8") as f:
     last_name_list = f.readlines()
 last_name_list = [x.strip().upper() for x in last_name_list]
 last_name_decode = [unidecode(x) for x in last_name_list]
+def ImproveQuality(img):
+    im_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    (thresh, im_bw) = cv2.threshold(im_gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+    #cv2.imshow("im_bw",im_bw)
+    print(thresh)
+    if thresh>80:
+        thresh=thresh*(1-(0.22-thresh/1000))
+    else:
+        thresh=thresh*(1-(0.3-thresh/1000))
+    threshold=thresh
+    print(thresh)
+    img = Image.fromarray(img).convert("LA")
+
+    pixels = np.array(img)[:,:,0]
+
+    # Remove pixels above threshold
+    pixels[pixels > threshold] = white
+    pixels[pixels < threshold] = black
+
+
+    # Morphological opening
+    blobSize = 1 # Select the maximum radius of the blobs you would like to remove
+    structureElement = disk(blobSize)  # you can define different shapes, here we take a disk shape
+    # We need to invert the image such that black is background and white foreground to perform the opening
+    pixels = np.invert(opening(np.invert(pixels), structureElement))
+
+
+    # Create and save new image.
+    newImg = Image.fromarray(pixels).convert('RGB')
+    #newImg.save("newImage1.jpg")
+    return np.array(newImg)
 def detect_blur_fft(image, size=60, thresh=10, vis=False):
     canny = cv2.Canny(image, 50,250)
     mean=cv2.mean(canny)[0]
@@ -212,7 +256,7 @@ def Crop_img(frame):
     return crop
     #print(aha)
     #break
-Size_Text=[[115,170,455,950],[165,235,395,950],[225,280,295,950],[280,326,455,950],[318,375,555,950],[375,425,295,950],[420,465,625,950],[465,510,295,950]]
+Size_Text=[[115,170,455,950],[165,235,395,950],[225,280,295,950],[280,326,455,950],[318,375,475,950],[375,425,295,950],[420,465,590,950],[465,510,295,950]]
 def ExtractInfo(img,count):
     im_pil = Image.fromarray(img)
     s = detector.predict(im_pil)
@@ -239,7 +283,8 @@ def ExtractIDAndName(img):
     count=0
     text=[]
     for i in Size_Text[:3]:
-        crop_img = img[i[0]:i[1],i[2]:i[3]]
+        #crop_img = img[i[0]:i[1],i[2]:i[3]]
+        crop_img = ImproveQuality(img[i[0]:i[1],i[2]:i[3]])
         text.append(ExtractInfo(crop_img,count))
         count+=1
     return text
