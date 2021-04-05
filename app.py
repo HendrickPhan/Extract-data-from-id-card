@@ -1,5 +1,5 @@
 import requests
-from flask import Flask, render_template, request, redirect, url_for, send_from_directory,jsonify
+from flask import Flask, render_template, request, redirect, url_for, send_from_directory,jsonify,abort
 from werkzeug.utils import secure_filename
 import numpy as np
 import os
@@ -48,6 +48,11 @@ def allowed_file(filename):
 def Process(image_path,filename):
     info={}
     frame = cv2.imread(image_path)
+    if frame is None:
+        #abort(400,"Bad Request")
+        return jsonify({
+            "error_code": "not_found_image"
+        }),400
     (h, w, d) = frame.shape
     classes, scores, boxes = model.detect(frame, 0.7, NMS_THRESHOLD)
     if len(classes)>=1:
@@ -72,18 +77,15 @@ def Process(image_path,filename):
             (mean, blurry) = detect_blur_fft(gray, size=60,
                                              thresh=8.5, vis=False)
             if blurry:
-                return {
-                    "blur": True,
-                    "id_number": None,
-                    "name": None
-                }
+                return jsonify({
+                    "error_code": "blurry_image"
+                })
             else:
                 IDCard=Crop_img(frame)
                 cv2.imwrite(app.config['IDCARD_FOLDER']+'IDCard_Of_' + filename,IDCard)
                 if type(IDCard) != None:
                     text=ExtractIDAndName(IDCard)
                 break
-        info["blur"]=False
         for i,content in enumerate(text):
             if i==0:
                 info["id_number"]=content
@@ -92,7 +94,7 @@ def Process(image_path,filename):
                     info["name"]=content
         with open('./OutputJson/info.json', 'a',encoding='utf8') as json_file:
             json.dump(info, json_file,ensure_ascii=False)
-        return info
+        return info,200
     else:
         return jsonify('Fail Cannot find any IDCard in image '+filename)
 @app.route('/upload', methods=['POST'])
@@ -123,7 +125,9 @@ def url():
                 f.write(requests.get(url["url"]).content)
             return Process(app.config['DOWNLOAD_FOLDER']+filename,filename)
         else:
-            return jsonify('Fail incorrect type Image '+filename)
+            return jsonify({
+                "error_code": "Fail incorrect type Image "+filename
+            }),400
 
 
 if __name__ == '__main__':
