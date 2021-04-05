@@ -49,7 +49,6 @@ def Process(image_path,filename):
     info={}
     frame = cv2.imread(image_path)
     if frame is None:
-        #abort(400,"Bad Request")
         return jsonify({
             "error_code": "not_found_image"
         }),400
@@ -57,19 +56,22 @@ def Process(image_path,filename):
     classes, scores, boxes = model.detect(frame, 0.7, NMS_THRESHOLD)
     if len(classes)>=1:
         for (classid, score, box) in zip(classes, scores, boxes):
-            box1=box.copy()
-            x0=box1[0]
-            x1=box1[1]
-            x2=box1[2]
-            x3=box1[3]
-            if box[1]+box[3]<h-25:
-                x3=box[1]+box[3]+25
-            if box[1]>25:
-                x1=box[1]-25
-            if box[0]+box[2]<w-25:
-                x2=box[0]+box[2]+25
-            if box[0]>25:
-                x0=box[0]-25
+            if box[1]+box[3]<h-50:
+                x3=box[1]+box[3]+50
+            else:
+                x3=h
+            if box[1]>50:
+                x1=box[1]-50
+            else:
+                x1=0
+            if box[0]+box[2]<w-50:
+                x2=box[0]+box[2]+50
+            else:
+                x2=w
+            if box[0]>50:
+                x0=box[0]-50
+            else:
+                x0=0
             crop_img = frame[x1:x3, x0:x2]
             #crop_img = frame[box[1]:box[1]+box[3], box[0]:box[0]+box[2]]
             frame1 = imutils.resize(crop_img, width=500)
@@ -79,24 +81,30 @@ def Process(image_path,filename):
             if blurry:
                 return jsonify({
                     "error_code": "blurry_image"
-                })
+                }),400
             else:
                 IDCard=Crop_img(frame)
                 cv2.imwrite(app.config['IDCARD_FOLDER']+'IDCard_Of_' + filename,IDCard)
                 if type(IDCard) != None:
                     text=ExtractIDAndName(IDCard)
                 break
+        info["name"]=""
         for i,content in enumerate(text):
             if i==0:
                 info["id_number"]=content
             if i==2 or i==1:
                 if content !=None:
-                    info["name"]=content
+                    if i==2:
+                        info["name"]=info["name"]+" "+content
+                    else:
+                        info["name"]=info["name"]+content
         with open('./OutputJson/info.json', 'a',encoding='utf8') as json_file:
             json.dump(info, json_file,ensure_ascii=False)
         return info,200
     else:
-        return jsonify('Fail Cannot find any IDCard in image '+filename)
+        return jsonify({
+            "error_code": 'Fail Cannot find any IDCard in image '+filename
+        }),400
 @app.route('/upload', methods=['POST'])
 def upload():
     file = request.files['file']
@@ -105,7 +113,6 @@ def upload():
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
     PATH_TO_TEST_IMAGES_DIR = app.config['UPLOAD_FOLDER']
     TEST_IMAGE_PATHS = [os.path.join(PATH_TO_TEST_IMAGES_DIR, filename.format(i)) for i in range(1, 2)]
-    info={}
     for image_path in TEST_IMAGE_PATHS:
         return (Process(image_path,filename))
 
