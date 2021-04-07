@@ -13,21 +13,25 @@ model.setInputParams(size=(255, 255), scale=1/255)
 def detectBB(frame):
     classes, scores, boxes = model.detect(frame, 0.7, NMS_THRESHOLD)
     (h, w, d) = frame.shape
+    crop_img=[]
     for (classid, score, box) in zip(classes, scores, boxes):
-        box1=box.copy()
-        x0=box1[0]
-        x1=box1[1]
-        x2=box1[2]
-        x3=box1[3]
-        if box[1]+box[3]<h-25:
-            x3=box[1]+box[3]+25
-        if box[1]>25:
-            x1=box[1]-25
-        if box[0]+box[2]<w-25:
-            x2=box[0]+box[2]+25
-        if box[0]>25:
-            x0=box[0]-25
-        crop_img = frame[x1:x3, x0:x2]
+        if box[1]+box[3]<h-50:
+            x3=box[1]+box[3]+50
+        else:
+            x3=h
+        if box[1]>50:
+            x1=box[1]-50
+        else:
+            x1=0
+        if box[0]+box[2]<w-50:
+            x2=box[0]+box[2]+50
+        else:
+            x2=w
+        if box[0]>50:
+            x0=box[0]-50
+        else:
+            x0=0
+        crop_img.append([frame[x1:x3, x0:x2],classid])
     return crop_img
 def detect_blur_fft(image, size=60, thresh=10, vis=False):
     canny = cv2.Canny(image, 50,250)
